@@ -3,8 +3,8 @@ import bpy
 import math
 
 # (full) path to the directory 
-path_folder = '/Users/davide/Desktop/2015_WEF/anisotropic_scale/ear'
-flag_texture = True
+path_folder = '/media/nas/...'
+flag_texture = False
 name_texture_img = 'texture_blue_white_red.png'
 
 # [scene]
@@ -215,7 +215,7 @@ for item in obj_list:
 	
 	if flag_texture:
         #
-		tex       = bpy.data.textures.new('texture_blue_white_red',type='IMAGE')
+		tex       = bpy.data.textures.new('texture',type='IMAGE')
 		tex.image = img_tex
 		#
 		shape_tex = shape_mat.texture_slots.add()
