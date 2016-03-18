@@ -3,9 +3,10 @@ import bpy
 import math
 
 # (full) path to the directory 
-path_folder = '/media/nas/...'
-flag_texture = False
-name_texture_img = 'texture_blue_white_red.png'
+path_folder      = <string containing the path to the obj files>
+flag_texture     = <True,False>
+name_texture_img = <string containing the name of the texture image>
+flag_shadow      = <True,False>
 
 # [scene]
 # remove the default camera and lamp
@@ -34,9 +35,9 @@ camera_obj.hide_render = False
 # 
 bpy.context.scene.camera = camera_obj
 
-# [front lamp]
+# [hard lamp / front]
 # create a sun lamp in the specified position
-bpy.ops.object.lamp_add(type='SUN',location=(1.0,0.5,2.5),rotation=(-math.pi/18.0,math.pi/6.0,math.pi/18.0))
+bpy.ops.object.lamp_add(type='SUN',location=(0.95,-1.0,1.6),rotation=(-18.0*math.pi/180.0,47.0*math.pi/180.0,-70.0*math.pi/180.0))
 lamp_front_obj = bpy.context.object
 # set the lamp name
 lamp_front_obj.name = 'lamp_front'
@@ -57,16 +58,16 @@ lamp_front_obj.hide        = True
 lamp_front_obj.select      = False
 lamp_front_obj.hide_render = False
 
-# [back lamp]
+# [hard lamp / back]
 # create a sun lamp in the specified position
-bpy.ops.object.lamp_add(type='SUN',location=(0.5,-1.0,0.5),rotation=(-math.pi/9.0,7.0*math.pi/18.0,-4.0*math.pi/9.0))
+bpy.ops.object.lamp_add(type='SUN',location=(-1.0,-1.0,1.0),rotation=(-20.0*math.pi/180.0,70.0*math.pi/180.0,-155.0*math.pi/180.0))
 lamp_back_obj = bpy.context.object
 # set the lamp name
 lamp_back_obj.name = 'lamp_back'
 # set the lamp properties:
 # lamp
 lamp_back_obj.data.color        = (1.0,1.0,1.0)
-lamp_back_obj.data.energy       = 0.3
+lamp_back_obj.data.energy       = 0.5
 lamp_back_obj.data.use_specular = True
 lamp_back_obj.data.use_diffuse  = True
 # shadow
@@ -79,6 +80,23 @@ lamp_back_obj.data.shadow_adaptive_threshold = 0.0
 lamp_back_obj.hide        = True
 lamp_back_obj.select      = False
 lamp_back_obj.hide_render = False
+
+# [soft lamp]
+# create a soft lamp in the specified position
+bpy.ops.object.lamp_add(type='HEMI',location=(0.0,0.0,2.5),rotation=(0.0,0.0,0.0))
+lamp_soft_obj = bpy.context.object
+# set the lamp name
+lamp_soft_obj.name = 'lamp_soft'
+# set the lamp properties:
+# lamp
+lamp_soft_obj.data.color        = (1.0,1.0,1.0)
+lamp_soft_obj.data.energy       = 0.7
+lamp_soft_obj.data.use_specular = True
+lamp_soft_obj.data.use_diffuse  = True
+# activate the object
+lamp_soft_obj.hide        = True
+lamp_soft_obj.select      = False
+lamp_soft_obj.hide_render = True
 
 # [plane]
 # create a plane in the specified position
@@ -104,7 +122,7 @@ plane_shadow_mat.specular_intensity = 1.0
 plane_shadow_mat.specular_shader    = 'COOKTORR'  
 plane_shadow_mat.specular_hardness  = 500
 # shading
-plane_shadow_mat.emit         = 10.0
+plane_shadow_mat.emit         = 0.0
 plane_shadow_mat.ambient      = 1.0
 plane_shadow_mat.translucency = 0.0
 # transparency
@@ -126,7 +144,18 @@ plane_shadow_mat.use_cast_approximate    = True
 #
 plane_shadow_obj.hide        = True
 plane_shadow_obj.select      = False
-plane_shadow_obj.hide_render = False
+plane_shadow_obj.hide_render = True
+
+# [world]
+world = bpy.data.worlds.new('World')
+bpy.context.scene.world = world
+world.use_sky_paper                        = True
+world.light_settings.use_ambient_occlusion = False
+world.light_settings.ao_factor             = 0.8
+world.light_settings.gather_method         = 'RAYTRACE'
+world.light_settings.distance              = 1.0
+world.light_settings.sample_method         = 'CONSTANT_QMC'
+world.light_settings.samples               = 5.0
 
 # [render]
 # set the render properties:
@@ -148,8 +177,6 @@ bpy.context.scene.render.image_settings.compression = 50
 # [texture]
 if flag_texture:
 	img_tex = bpy.data.images.load(os.path.join(path_folder,name_texture_img))
-
-
 
 # get list of all files in directory
 full_path_to_directory = os.path.join(path_folder,'input')
@@ -214,7 +241,7 @@ for item in obj_list:
 	shape_mat.use_cast_approximate    = True
 	
 	if flag_texture:
-        #
+        	#
 		tex       = bpy.data.textures.new('texture',type='IMAGE')
 		tex.image = img_tex
 		#
@@ -229,11 +256,26 @@ for item in obj_list:
 
 	#
 	bpy.context.scene.render.filepath = os.path.join(path_folder,'output',shape_name)
-
-	#
 	bpy.ops.render.render(animation=False,write_still=True)
+
+	if flag_shadow:
+		# transparency
+		shape_mat.use_transparency    = True
+		shape_mat.transparency_method = 'Z_TRANSPARENCY'
+		shape_mat.alpha               = 0.0
+		shape_mat.specular_alpha      = 0.1
+		#
+		world.light_settings.use_ambient_occlusion = True
+		lamp_front_obj.hide_render   = True
+		lamp_back_obj.hide_render    = True
+		lamp_soft_obj.hide_render    = False
+		plane_shadow_obj.hide_render = False
+		#
+		bpy.context.scene.render.filepath = os.path.join(path_folder,'output',shape_name+'_shadow')
+		bpy.ops.render.render(animation=False,write_still=True)
 
 	#
 	shape_obj.hide        = True
 	shape_obj.select      = False
 	shape_obj.hide_render = True
+
